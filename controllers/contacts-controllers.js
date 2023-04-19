@@ -5,13 +5,18 @@ const { ctrlWrapper } = require("../utils");
 const { HttpError } = require("../helpers");
 
 const listContacts = async (req, res) => {
-    const allContacts = await Contact.find();
+    const { _id: owner } = req.user;
+    const { page = 1, limit = 5 } = req.query;
+    const skip = (page - 1) * limit;
+    const allContacts = await Contact.find({ owner }, "-subscription", {
+        skip,
+        limit,
+    }).populate("owner", "name email");
     res.json(allContacts);
 };
 
 const getContactById = async (req, res) => {
     const { contactId } = req.params;
-    // const contact = await Contact.findOne({ _id: contactId });
     const contact = await Contact.findById(contactId);
     if (!contact) {
         throw HttpError(404, `Contact with id ${contactId} not found`);
@@ -20,7 +25,8 @@ const getContactById = async (req, res) => {
 };
 
 const addContact = async (req, res) => {
-    const newContact = await Contact.create(req.body);
+    const { _id: owner } = req.user;
+    const newContact = await Contact.create({ ...req.body, owner });
     res.status(201).json(newContact);
 };
 
